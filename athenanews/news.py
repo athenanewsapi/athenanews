@@ -1,5 +1,8 @@
 import time
 import requests
+from typing import Optional
+import datetime
+
 
 # API endpoints and constants
 QUERY_URL = "https://app.runathena.com/api/v2/query-async"
@@ -59,21 +62,9 @@ def fetch_all_articles(query_id: str, total_results: int, api_key: str, toggle_s
         page += 1
     return all_articles
 
-def news(start_date: str, end_date: str, query: str, key_phrases: Optional[str] = None, toggle_state: str = "All Articles", api_key: str, poll_interval: int = 1) -> list:
+def _search_chunk(start_date: str, end_date: str, query: str, key_phrases: str, toggle_state: str, api_key: str, poll_interval: int = 1) -> list:
     """
-    Queries the Athena News API and returns a list of articles.
-
-    Parameters:
-      - start_date (str): ISO formatted start date.
-      - end_date (str): ISO formatted end date.
-      - query (str): The search query.
-      - key_phrases (str): Key phrases to refine the search.
-      - toggle_state (str): The toggle state (e.g., "All Articles").
-      - api_key (str): Your Athena API key.
-      - poll_interval (int, optional): Seconds to wait between polls (default is 1).
-
-    Returns:
-      - list: A list of articles returned by the API.
+    Helper function that performs the search for a given date range chunk.
     """
     query_id = send_initial_query(query, key_phrases, api_key, toggle_state, start_date, end_date)
     if not query_id:
@@ -87,5 +78,62 @@ def news(start_date: str, end_date: str, query: str, key_phrases: Optional[str] 
     if total_results == 0:
         return []
 
-    all_articles = fetch_all_articles(query_id, total_results, api_key)
+    articles = fetch_all_articles(query_id, total_results, api_key)
+    return articles
+
+def news(
+    start_date: str,
+    end_date: str,
+    query: str,
+    api_key: str,
+    key_phrases: Optional[str] = None,
+    toggle_state: str = "All Articles",
+    poll_interval: int = 1
+) -> list:
+    """
+    Queries the Athena News API and returns a list of articles.
+
+    If the date range between start_date and end_date exceeds 7 days, the search
+    is divided into 7-day chunks. The results from all chunks are then combined
+    and sorted by article score (descending).
+
+    Parameters:
+      - start_date (str): ISO formatted start date.
+      - end_date (str): ISO formatted end date.
+      - query (str): The search query.
+      - api_key (str): Your Athena API key.
+      - key_phrases (Optional[str]): Additional key phrases. Defaults to None.
+      - toggle_state (str): The toggle state. Defaults to "All Articles".
+      - poll_interval (int): Seconds to wait between polls (default is 1).
+
+    Returns:
+      - list: Combined and sorted list of articles.
+    """
+    if key_phrases is None:
+        key_phrases = ""
+
+    # Convert start_date and end_date to datetime objects (remove trailing 'Z' if present)
+    start_dt = datetime.datetime.fromisoformat(start_date.rstrip("Z"))
+    end_dt = datetime.datetime.fromisoformat(end_date.rstrip("Z"))
+    
+    delta_days = (end_dt - start_dt).days
+    all_articles = []
+
+    if delta_days > 7:
+        current_start = start_dt
+        while current_start < end_dt:
+            current_end = current_start + datetime.timedelta(days=7)
+            if current_end > end_dt:
+                current_end = end_dt
+            # Convert back to ISO format with 'Z' to indicate UTC time
+            chunk_start = current_start.isoformat() + "Z"
+            chunk_end = current_end.isoformat() + "Z"
+            articles = _search_chunk(chunk_start, chunk_end, query, key_phrases, toggle_state, api_key, poll_interval)
+            all_articles.extend(articles)
+            current_start = current_end
+        # Sort articles by 'score' in descending order (assumes each article dict has a 'score' key)
+        all_articles.sort(key=lambda a: a.get("score", 0), reverse=True)
+    else:
+        all_articles = _search_chunk(start_date, end_date, query, key_phrases, toggle_state, api_key, poll_interval)
+    
     return all_articles
