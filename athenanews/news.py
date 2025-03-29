@@ -59,7 +59,7 @@ def fetch_all_articles(query_id: str, total_results: int, api_key: str, toggle_s
         page += 1
     return all_articles
 
-def news(start_date: str, end_date: str, query: str, key_phrases: str, toggle_state: str, api_key: str, poll_interval: int = 1) -> list:
+def news(start_date: str, end_date: str, query: str, key_phrases: Optional[str] = None, toggle_state: str = "All Articles", api_key: str, poll_interval: int = 1) -> list:
     """
     Queries the Athena News API and returns a list of articles.
 
