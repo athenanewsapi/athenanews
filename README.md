@@ -56,6 +56,6 @@ news(start_date, end_date, query, key_phrases, toggle_state, api_key)
 **Returns:**
 A list of articles returned by the API.
 
-**Contributing**
+## Contributing
 Contributions are welcome! Please open an issue or submit a pull request on GitHub.
 
