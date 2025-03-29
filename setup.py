@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setuptools.setup(
     name="athenanewsapi",               # Package name
     version="0.1.0",                    # Initial release version
-    author="Matt F.",
+    author="Matt F.",   
     author_email="matt@runathena.com",
     description="A simple wrapper for the Athena News API to simplify searching for articles.",
     long_description=long_description,
