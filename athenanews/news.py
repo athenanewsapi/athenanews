@@ -14,18 +14,26 @@ def send_initial_query(query: str, key_phrases: str, api_key: str, toggle_state:
     """
     Sends the initial query to the API and returns the query_id.
     """
-    payload = {
-        "query": query,
-        "key_phrases": key_phrases,
-        "api_key": api_key,
-        "toggle_state": toggle_state,
-        "start_date": start_date,
-        "end_date": end_date
-    }
-    response = requests.post(QUERY_URL, headers=HEADERS, json=payload)
-    response.raise_for_status()
-    data = response.json()
-    return data.get('query_id')
+    try:
+        print('hi')
+        payload = {
+            "query": query,
+            "key_phrases": key_phrases,
+            "api_key": api_key,
+            "toggle_state": toggle_state,
+            "start_date": start_date,
+            "end_date": end_date
+        }
+        response = requests.post(QUERY_URL, headers=HEADERS, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        if data['state'] == 'SUCCESS':
+            return data.get('query_id')
+        else:
+            print(data)
+            return data
+    except Exception as e:
+        print(str(e))
 
 def poll_for_results(query_id: str, api_key: str, poll_interval: int = 1) -> dict:
     """
@@ -67,8 +75,13 @@ def _search_chunk(start_date: str, end_date: str, query: str, key_phrases: str, 
     Helper function that performs the search for a given date range chunk.
     """
     query_id = send_initial_query(query, key_phrases, api_key, toggle_state, start_date, end_date)
+    
+    if isinstance(query_id, str) == False:
+        if query_id.get('message'):
+            raise Exception(str(query_id['message']))
+
     if not query_id:
-        raise ValueError("Failed to retrieve query ID.")
+        raise Exception("Failed to retrieve query ID.")
 
     result_data = poll_for_results(query_id, api_key, poll_interval)
     if result_data.get('state') != 'SUCCESS':
@@ -87,8 +100,9 @@ def news(
     query: str,
     api_key: str,
     key_phrases: Optional[str] = None,
-    toggle_state: str = "All Articles",
-    poll_interval: int = 1
+    toggle_state: Optional[str] = 'All Articles',
+    threshold: Optional[float] = .00055,
+    poll_interval: int = 1,
 ) -> list:
     """
     Queries the Athena News API and returns a list of articles.
@@ -136,4 +150,6 @@ def news(
     else:
         all_articles = _search_chunk(start_date, end_date, query, key_phrases, toggle_state, api_key, poll_interval)
     
+    all_articles = [item for item in all_articles if item.get("score", 0) > 0.00055]
+
     return all_articles
