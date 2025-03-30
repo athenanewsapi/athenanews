@@ -10,6 +10,27 @@ RESULTS_URL = "https://app.runathena.com/api/v2/get-results"
 HEADERS = {"Content-Type": "application/json"}
 ARTICLES_PER_PAGE = 25
 
+def parse_date_to_datetime(date_str: str) -> datetime.datetime:
+    """
+    Parses a date string into a datetime object. Supports full ISO strings
+    (with time) or the simpler 'YYYY-MM-DD' format. Assumes UTC.
+    """
+    try:
+        # Try to parse as full ISO format (strip trailing 'Z' if present)
+        dt = datetime.datetime.fromisoformat(date_str.rstrip("Z"))
+    except ValueError:
+        # Fallback to date-only format
+        dt = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+    # Assume UTC if no timezone info is present
+    return dt.replace(tzinfo=datetime.timezone.utc)
+
+def datetime_to_isodate(dt: datetime.datetime) -> str:
+    """
+    Converts a datetime object to an ISO-formatted string that includes microseconds,
+    in the format '%Y-%m-%dT%H:%M:%S.%fZ'.
+    """
+    return dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
 def send_initial_query(query: str, key_phrases: str, api_key: str, toggle_state: str, start_date: str, end_date: str) -> str:
     """
     Sends the initial query to the API and returns the query_id.
@@ -100,35 +121,41 @@ def news(
     query: str,
     api_key: str,
     key_phrases: Optional[str] = None,
-    toggle_state: Optional[str] = 'All Articles',
     threshold: Optional[float] = .00055,
-    poll_interval: int = 1,
+    toggle_state: str = "All Articles",
+    poll_interval: int = 1
 ) -> list:
     """
     Queries the Athena News API and returns a list of articles.
-
+    
     If the date range between start_date and end_date exceeds 7 days, the search
     is divided into 7-day chunks. The results from all chunks are then combined
     and sorted by article score (descending).
-
+    
+    This function accepts dates in various formats (full ISO or 'YYYY-MM-DD') and
+    converts them to ISO format (which MongoDB accepts).
+    
     Parameters:
-      - start_date (str): ISO formatted start date.
-      - end_date (str): ISO formatted end date.
+      - start_date (str): Start date in ISO format or 'YYYY-MM-DD'.
+      - end_date (str): End date in ISO format or 'YYYY-MM-DD'.
       - query (str): The search query.
       - api_key (str): Your Athena API key.
       - key_phrases (Optional[str]): Additional key phrases. Defaults to None.
       - toggle_state (str): The toggle state. Defaults to "All Articles".
       - poll_interval (int): Seconds to wait between polls (default is 1).
-
+    
     Returns:
       - list: Combined and sorted list of articles.
     """
     if key_phrases is None:
         key_phrases = ""
 
-    # Convert start_date and end_date to datetime objects (remove trailing 'Z' if present)
-    start_dt = datetime.datetime.fromisoformat(start_date.rstrip("Z"))
-    end_dt = datetime.datetime.fromisoformat(end_date.rstrip("Z"))
+    # Parse input dates into datetime objects and then convert to ISO format
+    start_dt = parse_date_to_datetime(start_date)
+    end_dt = parse_date_to_datetime(end_date)
+    
+    start_iso = datetime_to_isodate(start_dt)
+    end_iso = datetime_to_isodate(end_dt)
     
     delta_days = (end_dt - start_dt).days
     all_articles = []
@@ -139,17 +166,17 @@ def news(
             current_end = current_start + datetime.timedelta(days=7)
             if current_end > end_dt:
                 current_end = end_dt
-            # Convert back to ISO format with 'Z' to indicate UTC time
-            chunk_start = current_start.isoformat() + "Z"
-            chunk_end = current_end.isoformat() + "Z"
+            # Convert each chunk's datetime to ISO format for the API call
+            chunk_start = datetime_to_isodate(current_start)
+            chunk_end = datetime_to_isodate(current_end)
             articles = _search_chunk(chunk_start, chunk_end, query, key_phrases, toggle_state, api_key, poll_interval)
             all_articles.extend(articles)
             current_start = current_end
         # Sort articles by 'score' in descending order (assumes each article dict has a 'score' key)
         all_articles.sort(key=lambda a: a.get("score", 0), reverse=True)
     else:
-        all_articles = _search_chunk(start_date, end_date, query, key_phrases, toggle_state, api_key, poll_interval)
-    
+        all_articles = _search_chunk(start_iso, end_iso, query, key_phrases, toggle_state, api_key, poll_interval)
+
     all_articles = [item for item in all_articles if item.get("score", 0) > 0.00055]
 
     return all_articles
