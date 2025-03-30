@@ -11,7 +11,7 @@ setuptools.setup(
     description="A simple wrapper for the Athena News API to simplify searching for articles.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/athenanewsapi/athenanews",  # Update with your repo URL
+    url="https://github.com/athenanewsapi/athenanews", 
     packages=setuptools.find_packages(),
     install_requires=[
         "requests",
@@ -22,4 +22,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
+    license_files=("LICENSE",)  
 )
