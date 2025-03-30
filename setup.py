@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="athenanewsapi",               # Package name
-    version="0.1.0",                    # Initial release version
+    version="0.1.3",                    # Initial release version
     author="Matt F.",   
     author_email="matt@runathena.com",
     description="A simple wrapper for the Athena News API to simplify searching for articles.",
@@ -22,5 +22,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
-    license_files=("LICENSE",)  
+    #license_files=("LICENSE",)  
 )

@@ -17,11 +17,11 @@ Install the package via pip (after publishing to PyPI):
 Or install directly from source:
 
 ```
-git clone https://github.com/yourusername/athenanewsapi.git
+git clone https://github.com/athenanewsapi/athenanews.git
 cd athenanewsapi
 pip install .
 ```
-Then get your API key by [creating an Athena account](https://runathena.com/register). 
+Then get your API key by [creating an Athena account](https://app.runathena.com/register). 
 
 ## Usage
 
@@ -49,8 +49,8 @@ news(start_date, end_date, query, key_phrases, toggle_state, api_key)
 - **start_date (str):** ISO formatted start date.
 - **end_date (str):** ISO formatted end date.
 - **query (str):** The search query.
-- **key_phrases (str):** Key phrases to refine the search. (ex: `('elon' or 'musk') and not 'sam altman'`)
-- **toggle_state (str):** The toggle state (e.g., "All Articles" or "Encoded Articles").
+- **key_phrases (str) OPTIONAL:** Key phrases to refine the search. (ex: `('elon' or 'musk') and not 'sam altman'`)
+- **toggle_state (str) OPTIONAL:** The toggle state (e.g., "All Articles" or "Encoded Articles").
 - **api_key (str):** Your Athena API key.
 
 **Returns:**
